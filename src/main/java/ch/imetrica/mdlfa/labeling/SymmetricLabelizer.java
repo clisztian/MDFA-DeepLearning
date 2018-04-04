@@ -32,6 +32,7 @@ public class SymmetricLabelizer implements Labelizer {
 	 */
 	private static final long serialVersionUID = 1L;
 	private LabelType labelType = LabelType.OBSERVATIONAL;
+	
 	private int L; 
 	private double omega0;
 	private double[] symmetricaCoeffs;
@@ -41,8 +42,7 @@ public class SymmetricLabelizer implements Labelizer {
 		this.omega0 = omega0;
 		this.L = L; 	
 	}
-	
-	
+		
 	public SymmetricLabelizer computeSymmetricFilter() {
 					
 		double sum = 0; 
@@ -98,6 +98,12 @@ public class SymmetricLabelizer implements Labelizer {
 		}
 
 		return label;
+	}
+
+
+	@Override
+	public LabelType getLabelType() {
+		return labelType;
 	}
 	
 }
