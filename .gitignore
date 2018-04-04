@@ -1,2 +1,6 @@
 bin/
 .gradle/
+.git
+*.class
+.settings
+.project
