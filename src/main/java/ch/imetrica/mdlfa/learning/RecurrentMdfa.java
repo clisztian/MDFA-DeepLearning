@@ -1,5 +1,6 @@
 package ch.imetrica.mdlfa.learning;
 
+import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.GradientNormalization;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
@@ -9,11 +10,21 @@ import org.deeplearning4j.nn.conf.layers.GravesLSTM;
 import org.deeplearning4j.nn.conf.layers.RnnOutputLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
+import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
+import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
+import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import ch.imetrica.mdfa.mdfa.MDFABase;
+import ch.imetrica.mdlfa.dataiterator.MDFADataSetIterator;
+import ch.imetrica.mdlfa.features.MDFAFeatureExtraction;
+import ch.imetrica.mdlfa.util.TimeSeriesFile;
 
 /**
  * 
@@ -33,175 +44,184 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
  */
 public class RecurrentMdfa {
 
+	private MDFAFeatureExtraction featureExtractor;
+	private MDFADataSetIterator trainData;
+	private MDFADataSetIterator testData;
+	private MultiLayerNetwork mdfaLSTMNetwork;
 	
-	    //Random number generator seed, for reproducibility
-	    public static final int seed = 12345;
-	    //Number of iterations per minibatch
-	    public static final int iterations = 35;
-	    //Number of epochs (full passes of the data)
-	    public static final int nEpochs = 80;
-	    //Number of data points
-	    public static final int nSamples = 25;
-	    //Network learning rate
-	    public static final double learningRate = 0.0001;
+	private static final Logger log = LoggerFactory.getLogger(RecurrentMdfa.class);
 
-	    public static void main(String[] args) {
-	        //Generate the training data
-	        DataSet trainingData = getTrainingData();
-	        trainingData.shuffle();
-	        System.out.println(trainingData);
-	        System.out.println();
-	        DataSet testData = getTestData();
-	        System.out.println(testData);
-
-	        //Create the network
-	        int numInput = 1;
-	        int numOutputs = 1;
-	        int nHidden = 30;
-
-	        NeuralNetConfiguration.Builder builder = new NeuralNetConfiguration.Builder();
-	            builder.seed(seed);
-	            builder.iterations(iterations);
-	            builder.optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT);
-	            builder.learningRate(learningRate);
-	            builder.regularization(true);
-	            builder.updater(Updater.RMSPROP);
-	            builder.gradientNormalization(GradientNormalization.ClipL2PerLayer);
-	            builder.gradientNormalizationThreshold(0.00001);
-
-	        NeuralNetConfiguration.ListBuilder listBuilder = builder.list();
-
-	        listBuilder.layer(0, new GravesLSTM.Builder()
-	        		            .nIn(numInput).nOut(nHidden)
-	        		            .activation(Activation.TANH)
-	        		            .l2(0.0001)
-	        		            .weightInit(WeightInit.XAVIER)
-	        		            .build());
-	        listBuilder.layer(1, new GravesLSTM.Builder()
-	        					.nIn(nHidden).nOut(nHidden)
-	        					.activation(Activation.TANH)
-	        					.l2(0.0001)
-	        					.weightInit(WeightInit.XAVIER)
-	        					.build());
-	        listBuilder.layer(2, new RnnOutputLayer.Builder()
-	        					.lossFunction(LossFunctions.LossFunction.MSE)
-	        					.activation(Activation.IDENTITY)
-	        					.l2(0.0001)
-	        					.weightInit(WeightInit.XAVIER)
-	        					.nIn(nHidden).nOut(numOutputs)
-	        					.build());
-	        listBuilder.pretrain(false).backprop(true);
-
-	        MultiLayerConfiguration conf = listBuilder.build();
-	        MultiLayerNetwork net = new MultiLayerNetwork(conf);
-	        net.init();
-	        //net.setListeners(new HistogramIterationListener(1));
-
-	        INDArray output;
-	        //Train the network on the full data set
-	        for( int i = 0; i < nEpochs; i++ ) {
-	            // train the model
-	            net.fit(trainingData);
-	            output = net.rnnTimeStep(trainingData.getFeatureMatrix());
-	            System.out.println(output);
-	            net.rnnClearPreviousState();
-	        }
-
-	        System.out.println("Result on training data: ");
-	        System.out.println(net.rnnTimeStep(trainingData.getFeatureMatrix()));
-	        System.out.println(trainingData.getFeatureMatrix());
-
-	        System.out.println();
-
-	        System.out.println("Result on test data: ");
-	        System.out.println(net.rnnTimeStep(testData.getFeatureMatrix()));
-	        System.out.println(testData.getFeatureMatrix());
-
-
-	    }
-
-	    /*
-	        Generate the training data. The sequence to train is out = 1, 2, 3, ..., 100.
-	        This corresponds to having as input the sequence seq = 0, 1, 2, ..., 99, so for this
-	        training data set the input attribute sequence is seq and the class/target attribute is out.
-	        The RNN should then be able to predict 101, 102, ... given the input 100, 101, ...
-	        That is: the last output is the next input.
-	     */
-	    private static DataSet getTrainingData() {
-	        double[] seq = new double[nSamples];
-	        double[] out = new double[nSamples];
-	        // seq is 0, 1, 2, 3, .., nSamples-1
-	        for (int i= 0; i < nSamples; i++) {
-	            if(i == 0)
-	                seq[i] = 0;
-	            else
-	                seq[i] = seq[i-1] + 1;
-	        }
-	        // out is the next seq input
-	        for(int i = 0; i < nSamples; i++) {
-	            if (i != (nSamples - 1))
-	                out[i] = seq[i + 1];
-	            else
-	                out[i] = seq[i] + 1;
-	        }
-	        // Scaling to [0, 1] based on the training output
-	        int min = 1;
-	        int max = nSamples;
-	        for(int i = 0; i < nSamples; i++) {
-	            seq[i] = (seq[i] - min)/(max - min);
-	            out[i] = (out[i] - min)/(max - min);
-	        }
-
-	        INDArray seqNDArray = Nd4j.create(seq, new int[]{nSamples,1});
-	        INDArray inputNDArray = Nd4j.zeros(1,1,nSamples);
-	        inputNDArray.putRow(0, seqNDArray.transpose());
-
-	        INDArray outNDArray = Nd4j.create(out, new int[]{nSamples,1});
-	        INDArray outputNDArray = Nd4j.zeros(1,1,nSamples);
-	        outputNDArray.putRow(0, outNDArray.transpose());
-
-	        DataSet dataSet = new DataSet(inputNDArray, outputNDArray);
-	        return dataSet;
-	    }
-
-	    private static DataSet getTestData() {
-	        int testLength = nSamples;
-	        double[] seq = new double[testLength];
-	        double[] out = new double[testLength];
-	        for (int i= 0; i < testLength; i++) {
-	            if(i == 0)
-	                seq[i] = 25;
-	            else
-	                seq[i] = seq[i-1] + 1;
-	        }
-	        // out is the next seq input
-	        for(int i = 0; i < testLength; i++) {
-	            if (i != (testLength - 1))
-	                out[i] = seq[i + 1];
-	            else
-	                out[i] = seq[i] + 1;
-	        }
-
-	        // Scaling to [0, 1] using same normalization as training data's
-	        int min = 1;
-	        int max = nSamples;
-	        for(int i = 0; i < nSamples; i++) {
-	            seq[i] = (seq[i] - min)/(max - min);
-	            out[i] = (out[i] - min)/(max - min);
-	        }
-
-	        INDArray seqNDArray = Nd4j.create(seq, new int[]{testLength,1});
-	        INDArray inputNDArray = Nd4j.zeros(1,1,testLength);
-	        inputNDArray.putColumn(0, seqNDArray);
-
-	        INDArray outNDArray = Nd4j.create(out, new int[]{testLength,1});
-	        INDArray outputNDArray = Nd4j.zeros(1,1,testLength);
-	        outputNDArray.putColumn(0, outNDArray);
-
-	        DataSet dataSet = new DataSet(inputNDArray, outputNDArray);
-	        return dataSet;
-	    }
 	
 	
+	public RecurrentMdfa() {
+		
+		featureExtractor = new MDFAFeatureExtraction(6);
+	}
 	
+	public RecurrentMdfa setTrainingTestData(String[] file, 
+			                             TimeSeriesFile fileInfo, 
+			                             int miniBatchSize,
+			                             int totalTrainExamples,
+			                             int totalTestExamples,
+			                             int timeStepLength) throws Exception {
+		
+		setTrainData(new MDFADataSetIterator(file, fileInfo,
+				featureExtractor.getFeatureExtractors(),
+                miniBatchSize, 
+                totalTrainExamples, 
+                timeStepLength));
+		
+		setTestData(new MDFADataSetIterator(file, fileInfo,
+				featureExtractor.getFeatureExtractors(),
+                miniBatchSize, 
+                totalTestExamples, 
+                timeStepLength));
+	
+		return this;
+	}
+	
+	public void normalizeData() {
+		
+    	DataNormalization normalizer = new NormalizerStandardize();
+        normalizer.fit(trainData);              
+        trainData.reset();
+        trainData.setPreProcessor(normalizer);
+        testData.setPreProcessor(normalizer);
+	}
+	
+	
+	public static NeuralNetConfiguration.ListBuilder setNeuralNetConfiguration(int seed, int iterations, 
+				double learningRate, double gradientNormThreshold) {
+		
+		NeuralNetConfiguration.Builder builder = new NeuralNetConfiguration.Builder();
+        builder.seed(seed);
+        builder.iterations(iterations);
+        builder.optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT);
+        builder.learningRate(learningRate);
+        builder.regularization(true);
+        builder.updater(Updater.RMSPROP);
+        builder.gradientNormalization(GradientNormalization.ClipL2PerLayer);
+        builder.gradientNormalizationThreshold(gradientNormThreshold);
+		
+        
+        return builder.list();
+	}
+	
+	public void buildNetworkLayers(int nHiddenLayers, int nHidden, NeuralNetConfiguration.ListBuilder listBuilder) {
+		
+		
+		int numInput = featureExtractor.getNumberOfFeatures();
+		
+		listBuilder.layer(0, new GravesLSTM.Builder()
+	            .nIn(numInput).nOut(nHidden)
+	            .activation(Activation.SIGMOID)
+	            .l2(0.0001)
+	            .weightInit(WeightInit.XAVIER)
+	            .build());
+		
+		for(int layerIndex = 0; layerIndex < nHiddenLayers; layerIndex++) {
+			
+			listBuilder.layer(layerIndex+1, new GravesLSTM.Builder()
+					.nIn(nHidden).nOut(nHidden)
+					.activation(Activation.SIGMOID)
+					.l2(0.0001)
+					.weightInit(WeightInit.XAVIER)
+					.build());	
+		}
+		
+		listBuilder.layer(nHiddenLayers + 1, new RnnOutputLayer.Builder()
+				.lossFunction(LossFunctions.LossFunction.MCXENT)
+				.activation(Activation.SOFTMAX)
+				.l2(0.0001)
+				.weightInit(WeightInit.XAVIER)
+				.nIn(nHidden).nOut(2)
+				.build());
+		
+		listBuilder.pretrain(false).backprop(true);
+		MultiLayerConfiguration conf = listBuilder.build();
+		mdfaLSTMNetwork = new MultiLayerNetwork(conf);
+		mdfaLSTMNetwork.init();
+		mdfaLSTMNetwork.setListeners(new ScoreIterationListener(20));
+        
+	}
+	
+	
+	public void train(int nEpochs) {
+		
+		String str = "Test set evaluation at epoch %d: Accuracy = %.2f, F1 = %.2f";
+        for (int i = 0; i < nEpochs; i++) {
+        	
+        	mdfaLSTMNetwork.fit(trainData);
+
+            //Evaluate on the test set:
+            Evaluation evaluation = mdfaLSTMNetwork.evaluate(testData);
+            log.info(String.format(str, i, evaluation.accuracy(), evaluation.f1()));
+            System.out.println(String.format(str, i, evaluation.accuracy(), evaluation.f1()));
+
+            testData.reset();
+            trainData.reset();
+        }
+
+        log.info("----- Example Complete -----");
+        System.out.println("----- Example Complete -----");
+		
+		
+	}
+	
+
+	public MDFADataSetIterator getTrainData() {
+		return trainData;
+	}
+
+	public void setTrainData(MDFADataSetIterator trainData) {
+		this.trainData = trainData;
+	}
+
+	public MDFADataSetIterator getTestData() {
+		return testData;
+	}
+
+	public void setTestData(MDFADataSetIterator testData) {
+		this.testData = testData;
+	}
+
+
+    public static void main(String[] args) throws Exception {
+	    	
+	    
+    	String[] dataFiles = new String[1];
+		dataFiles[0] = "src/test/resources/testSeries1.csv";
+		TimeSeriesFile fileInfo = new TimeSeriesFile("yyyy-MM-dd", "Index", "Open");
+    	
+    	int miniBatchSize = 40;
+    	int totalTrainExamples = 500;
+    	int totalTestExamples = 200;
+		int timeStepLength = 40;
+		
+		int nHiddenLayers = 1;
+		int nHidden = 68;
+		
+		int nEpochs = 40;
+		int seed = 123;
+		int iterations = 40;
+		double learningRate = .01;
+		double gradientNormThreshold = 10.0;
+		
+    	RecurrentMdfa myNet = new RecurrentMdfa();
+    	myNet.setTrainingTestData(dataFiles, fileInfo, 
+    			                  miniBatchSize, totalTrainExamples, 
+    			                  totalTestExamples, timeStepLength);
+    	
+    	myNet.normalizeData();
+    	myNet.buildNetworkLayers(nHiddenLayers, nHidden, 
+    			setNeuralNetConfiguration(seed, iterations, learningRate, gradientNormThreshold));
+    	
+	    
+    	myNet.train(nEpochs);
+    
+    	
+    }
+	
+	    
+	    
 }

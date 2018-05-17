@@ -3,7 +3,6 @@ package ch.imetrica.mdlfa.labeling;
 import ch.imetrica.mdfa.series.TargetSeries;
 import ch.imetrica.mdfa.series.TimeSeries;
 
-
 /**
  * 
  * This regime labelizer labels a time series sequence

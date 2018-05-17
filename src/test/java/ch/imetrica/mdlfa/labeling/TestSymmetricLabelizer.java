@@ -9,6 +9,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 public class TestSymmetricLabelizer {
 
@@ -22,15 +24,19 @@ public class TestSymmetricLabelizer {
 		DateTime dt = new DateTime(2018,4,4,15,24);
 		TargetSeries target = new TargetSeries(new TimeSeries<Double>(), 1.0, false);
 		
+		DateTimeFormatter dtfOut = DateTimeFormat.forPattern("yyyy-MM-dd");
+		
 		for(int i = 0; i < 200; i++) {			
 			
 			target.addValue(dt.toString(), (double)i);
 			dt = dt.plusDays(1);
+
 		}
 		for(int i = 0; i < 200; i++) {			
 			
 			target.addValue(dt.toString(), 200.0 - (double)i);
 			dt = dt.plusDays(1);
+
 		}
 		
 		
@@ -74,4 +80,29 @@ public class TestSymmetricLabelizer {
 //		}
 	}
 
+	
+	public void printSimpleTimeSeries() {
+		
+		DateTime dt = new DateTime(2018,4,4,15,24);
+		TargetSeries target = new TargetSeries(new TimeSeries<Double>(), 1.0, false);
+		
+		DateTimeFormatter dtfOut = DateTimeFormat.forPattern("yyyy-MM-dd");
+		
+		int maxPeak = 1000;
+		for(int i = 0; i < maxPeak; i++) {			
+			
+			target.addValue(dt.toString(), (double)i);
+			dt = dt.plusDays(1);
+			
+			System.out.println(dtfOut.print(dt) + ", " + (double)i);
+		}
+		for(int i = 0; i < maxPeak; i++) {			
+			
+			target.addValue(dt.toString(), maxPeak - (double)i);
+			dt = dt.plusDays(1);
+
+		    System.out.println(dtfOut.print(dt) + ", " + (maxPeak - (double)i));	
+		}
+		
+	}
 }
