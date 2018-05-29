@@ -77,7 +77,7 @@ public class MDFAFeatureExtraction {
     public MDFAFeatureExtraction(int nFeatures) {
 		
     	
-    	anyMDFAs = new MDFABase[6];
+    	anyMDFAs = new MDFABase[4];
     	
     	anyMDFAs[0] = (new MDFABase()).setLowpassCutoff(Math.PI/8.0)
 				.setI1(1)
@@ -100,7 +100,7 @@ public class MDFAFeatureExtraction {
 				.setSeriesLength(400)
 				.setFilterLength(5);
     	
-    	anyMDFAs[2] = (new MDFABase()).setLowpassCutoff(Math.PI/12.0)
+    	anyMDFAs[2] = (new MDFABase()).setLowpassCutoff(Math.PI/4.0)
 				.setI1(1)
 				.setSmooth(.2)
 				.setDecayStart(.1)
@@ -120,25 +120,25 @@ public class MDFAFeatureExtraction {
 				.setSeriesLength(400)
 				.setFilterLength(5);
     	
-    	anyMDFAs[4] = (new MDFABase()).setLowpassCutoff(Math.PI/16.0)
-				.setI1(1)
-				.setSmooth(.2)
-				.setDecayStart(.1)
-				.setDecayStrength(.1)
-				.setLag(-1)
-				.setAlpha(2.0)
-				.setSeriesLength(400)
-				.setFilterLength(5);
-    	
-    	anyMDFAs[5] = (new MDFABase()).setLowpassCutoff(Math.PI/18.0)
-				.setI1(1)
-				.setSmooth(.2)
-				.setDecayStart(.1)
-				.setDecayStrength(.2)
-				.setLag(-2)
-				.setAlpha(2.0)
-				.setSeriesLength(400)
-				.setFilterLength(5);
+//    	anyMDFAs[4] = (new MDFABase()).setLowpassCutoff(Math.PI/16.0)
+//				.setI1(1)
+//				.setSmooth(.2)
+//				.setDecayStart(.1)
+//				.setDecayStrength(.1)
+//				.setLag(-1)
+//				.setAlpha(2.0)
+//				.setSeriesLength(400)
+//				.setFilterLength(5);
+//    	
+//    	anyMDFAs[5] = (new MDFABase()).setLowpassCutoff(Math.PI/18.0)
+//				.setI1(1)
+//				.setSmooth(.2)
+//				.setDecayStart(.1)
+//				.setDecayStrength(.2)
+//				.setLag(-2)
+//				.setAlpha(2.0)
+//				.setSeriesLength(400)
+//				.setFilterLength(5);
 		
 	}
 	

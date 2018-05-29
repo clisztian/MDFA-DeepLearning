@@ -1,10 +1,13 @@
 package ch.imetrica.mdlfa.dataiterator;
 
+import java.io.IOException;
 import java.util.List;
 
+import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.DataSetPreProcessor;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
+import org.nd4j.linalg.factory.Nd4j;
 
 import ch.imetrica.mdfa.datafeeds.CsvFeed;
 import ch.imetrica.mdfa.mdfa.MDFABase;
@@ -27,6 +30,11 @@ import ch.imetrica.mdlfa.util.TimeSeriesFile;
 public class MDFARegressionDataSetIterator implements DataSetIterator {
 
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 644472562104515997L;
+
 	private MultivariateFXSeries fxSeries;
 	
 	private int miniBatchSize;
@@ -44,6 +52,8 @@ public class MDFARegressionDataSetIterator implements DataSetIterator {
 	private MDFABase[] anyMDFAs;
 
 	private DataSetPreProcessor myPreprocessor;
+
+	private String[][] nextDates;
 	
 	
 	public MDFARegressionDataSetIterator(String[] dataInputPaths,
@@ -51,7 +61,7 @@ public class MDFARegressionDataSetIterator implements DataSetIterator {
             MDFABase[] anyMDFAs,
             int miniBatchSize, 
             int totalExamples, 
-            int timeStepLength) {
+            int timeStepLength) throws Exception {
 		
 		
 		this.fileInfo = fileInfo;
@@ -68,7 +78,7 @@ public class MDFARegressionDataSetIterator implements DataSetIterator {
 				                         fileInfo.getPriceColumnName());
 		
 		fxSeries = new MultivariateFXSeries(anyMDFAs, fileInfo.getDateTimeFormat());
-		fxSeries.addSeries(new TargetSeries(1.0, true, "TargetSeries"));
+		fxSeries.addSeries(new TargetSeries(0.7, true, "TargetSeries"));
 		fxSeries.setWhiteNoisePrefilters(36);
 		
 		
@@ -80,7 +90,7 @@ public class MDFARegressionDataSetIterator implements DataSetIterator {
 			fxSeries.addValue(observation.getDateTime(), observation.getValue());
 		}
         
-        //fxSeries.computeAllFilterCoefficients();	
+        fxSeries.computeAllFilterCoefficients();	
         fxSeries.chopFirstObservations(fxSeries.getSeries(0).getCoefficientSet(0).length);	
         
         int symmetricLength = fxSeries.getSeries(0).getCoefficientSet(0).length;
@@ -88,18 +98,15 @@ public class MDFARegressionDataSetIterator implements DataSetIterator {
 		while(true) {
 			
 			TimeSeriesEntry<double[]> observation = marketFeed.getNextMultivariateObservation();
-			
-			if(observation == null) break;
-			
+			if(observation == null) break;			
 			fxSeries.addValue(observation.getDateTime(), observation.getValue());
-			
 		}
 		
 		SymmetricLabelizer labeler = new SymmetricLabelizer(anyMDFAs[0].getLowPassCutoff(), 
 															symmetricLength)
 				                                           .computeSymmetricFilter();
 		
-		setMyLabels(labeler.labelTimeSeriesInt(fxSeries.getSeries(0).getTargetSeries()));
+		setMyLabels(labeler.getSymmetricSignal(fxSeries.getSeries(0).getTargetSeries()));
 		fxSeries.chopFirstObservations(symmetricLength);
 	
 		for(int i = 0; i < symmetricLength; i++) {
@@ -113,91 +120,118 @@ public class MDFARegressionDataSetIterator implements DataSetIterator {
 	
 	@Override
 	public boolean hasNext() {
-		// TODO Auto-generated method stub
-		return false;
+				
+//		System.out.println(currentFileListIndex + " " + miniBatchSize + " " + timeStepLength + " " + 
+//				fxSeries.size() + " " + fxSeries.getSeries(0).getCoefficientSet(0).length);
+		
+		return currentFileListIndex + miniBatchSize + timeStepLength < 
+				 (fxSeries.size() - fxSeries.getSeries(0).getCoefficientSet(0).length) ;
 	}
 
 	@Override
 	public DataSet next() {
-		// TODO Auto-generated method stub
-		return null;
+		
+		return next(miniBatchSize);
 	}
 
 	@Override
-	public DataSet next(int num) {
-		// TODO Auto-generated method stub
-		return null;
+	public DataSet next(int miniBatchSize) {
+		
+		this.miniBatchSize = miniBatchSize;
+		int index;
+		INDArray input = Nd4j.zeros(new int[]{ miniBatchSize, numberOfFeatures + 1, timeStepLength }, 'f' );
+		INDArray labels = Nd4j.zeros(new int[]{ miniBatchSize, 1, timeStepLength }, 'f'  );
+		nextDates = new String[miniBatchSize][timeStepLength];
+		
+		for(int i = 0; i < miniBatchSize; i++) {
+			
+		  for(int t = 0; t < timeStepLength; t++) {
+			  
+			  index = currentFileListIndex + i;
+			  double[] features = fxSeries.getSignalValue(index + t);
+			  Double label = myLabels.get(index + t).getValue();
+			 
+		  
+			  if(!fxSeries.getTargetDate(index + t).equals(myLabels.get(index + t).getDateTime())) {
+				  System.out.println(fxSeries.getTargetDate(index + t));
+			  }
+			  nextDates[i][t] = fxSeries.getTargetDate(index + t);
+			  
+			  if(label != null) {
+				  
+				  input.putScalar(i, 0, t, fxSeries.getTargetValue(index+t));
+				  for(int k = 0; k < features.length; k++) {
+					  input.putScalar(i, k+1, t, features[k]);
+				  }
+				  labels.putScalar(new int[]{ i, 0, t }, label.doubleValue());
+			  }
+		  }
+		}
+			
+		this.currentFileListIndex += miniBatchSize;
+		return new DataSet( input, labels ); 
+	
 	}
+
 
 	@Override
 	public int totalExamples() {
-		// TODO Auto-generated method stub
-		return 0;
+		return this.totalExamples;
 	}
 
 	@Override
 	public int inputColumns() {
-		// TODO Auto-generated method stub
-		return 0;
+		return numberOfFeatures;
 	}
 
 	@Override
 	public int totalOutcomes() {
-		// TODO Auto-generated method stub
-		return 0;
+		return 1;
 	}
 
 	@Override
 	public boolean resetSupported() {
-		// TODO Auto-generated method stub
-		return false;
+		return true;
 	}
 
 	@Override
 	public boolean asyncSupported() {
-		// TODO Auto-generated method stub
-		return false;
+		return true;
 	}
 
 	@Override
 	public void reset() {
-		// TODO Auto-generated method stub
-		
+		this.currentFileListIndex = 0;
 	}
 
 	@Override
 	public int batch() {
-		// TODO Auto-generated method stub
-		return 0;
+		return miniBatchSize;
 	}
 
 	@Override
 	public int cursor() {
-		// TODO Auto-generated method stub
-		return 0;
+		return this.currentFileListIndex;
 	}
 
 	@Override
 	public int numExamples() {
-		// TODO Auto-generated method stub
-		return 0;
+		return totalExamples;
 	}
 
 	@Override
 	public void setPreProcessor(DataSetPreProcessor preProcessor) {
-		// TODO Auto-generated method stub
+		this.setMyPreprocessor(preProcessor); 
 		
 	}
 
 	@Override
 	public DataSetPreProcessor getPreProcessor() {
-		// TODO Auto-generated method stub
-		return null;
+		return myPreprocessor;
 	}
 
 	@Override
 	public List<String> getLabels() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -215,30 +249,6 @@ public class MDFARegressionDataSetIterator implements DataSetIterator {
 
 
 
-	public int getCurrentFileListIndex() {
-		return currentFileListIndex;
-	}
-
-
-
-	public void setCurrentFileListIndex(int currentFileListIndex) {
-		this.currentFileListIndex = currentFileListIndex;
-	}
-
-
-
-	public int getTotalExamples() {
-		return totalExamples;
-	}
-
-
-
-	public void setTotalExamples(int totalExamples) {
-		this.totalExamples = totalExamples;
-	}
-
-
-
 	public int getTimeStepLength() {
 		return timeStepLength;
 	}
@@ -247,6 +257,30 @@ public class MDFARegressionDataSetIterator implements DataSetIterator {
 
 	public void setTimeStepLength(int timeStepLength) {
 		this.timeStepLength = timeStepLength;
+	}
+
+
+
+	public TimeSeriesFile getFileInfo() {
+		return fileInfo;
+	}
+
+
+
+	public void setFileInfo(TimeSeriesFile fileInfo) {
+		this.fileInfo = fileInfo;
+	}
+
+
+
+	public MDFABase[] getAnyMDFAs() {
+		return anyMDFAs;
+	}
+
+
+
+	public void setAnyMDFAs(MDFABase[] anyMDFAs) {
+		this.anyMDFAs = anyMDFAs;
 	}
 
 
@@ -263,17 +297,53 @@ public class MDFARegressionDataSetIterator implements DataSetIterator {
 
 
 
-	public MDFABase[] getAnyMDFAs() {
-		return anyMDFAs;
+	public int getTotalExamples() {
+		return totalExamples;
 	}
 
 
 
-	public void setAnyMDFAs(MDFABase[] anyMDFAs) {
-		this.anyMDFAs = anyMDFAs;
+	public void setTotalExamples(int totalExamples) {
+		this.totalExamples = totalExamples;
 	}
-	
-	
+
+
+
+	public TimeSeries<Double> getMyLabels() {
+		return myLabels;
+	}
+
+	public MultivariateFXSeries getFXSeries() {
+		return fxSeries;
+	}
+
+	public void setMyLabels(TimeSeries<Double> myLabels) {
+		this.myLabels = myLabels;
+	}
+
+
+
+	public DataSetPreProcessor getMyPreprocessor() {
+		return myPreprocessor;
+	}
+
+
+
+	public void setMyPreprocessor(DataSetPreProcessor myPreprocessor) {
+		this.myPreprocessor = myPreprocessor;
+	}
+
+
+
+	public String[][] getNextDates() {
+		return nextDates;
+	}
+
+
+
+	public void setNextDates(String[][] nextDates) {
+		this.nextDates = nextDates;
+	}
 	
 
 }

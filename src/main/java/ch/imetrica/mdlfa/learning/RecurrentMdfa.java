@@ -17,6 +17,8 @@ import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.learning.config.IUpdater;
+import org.nd4j.linalg.learning.config.Nesterovs;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,15 +93,13 @@ public class RecurrentMdfa {
 	
 	
 	public static NeuralNetConfiguration.ListBuilder setNeuralNetConfiguration(int seed, int iterations, 
-				double learningRate, double gradientNormThreshold) {
+				double learningRate, double gradientNormThreshold, double biasInit, IUpdater updater) {
 		
 		NeuralNetConfiguration.Builder builder = new NeuralNetConfiguration.Builder();
         builder.seed(seed);
-        builder.iterations(iterations);
         builder.optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT);
-        builder.learningRate(learningRate);
-        builder.regularization(true);
-        builder.updater(Updater.RMSPROP);
+        builder.biasInit(biasInit);
+        builder.updater(updater);
         builder.gradientNormalization(GradientNormalization.ClipL2PerLayer);
         builder.gradientNormalizationThreshold(gradientNormThreshold);
 		
@@ -145,7 +145,9 @@ public class RecurrentMdfa {
         
 	}
 	
+
 	
+
 	public void train(int nEpochs) {
 		
 		String str = "Test set evaluation at epoch %d: Accuracy = %.2f, F1 = %.2f";
@@ -207,14 +209,19 @@ public class RecurrentMdfa {
 		double learningRate = .01;
 		double gradientNormThreshold = 10.0;
 		
+		double biasInit = 1.0;
+		IUpdater updater = new Nesterovs();
+		
+		
     	RecurrentMdfa myNet = new RecurrentMdfa();
     	myNet.setTrainingTestData(dataFiles, fileInfo, 
     			                  miniBatchSize, totalTrainExamples, 
     			                  totalTestExamples, timeStepLength);
     	
     	myNet.normalizeData();
-    	myNet.buildNetworkLayers(nHiddenLayers, nHidden, 
-    			setNeuralNetConfiguration(seed, iterations, learningRate, gradientNormThreshold));
+    	
+		myNet.buildNetworkLayers(nHiddenLayers, nHidden, 
+    			setNeuralNetConfiguration(seed, iterations, learningRate, gradientNormThreshold, biasInit, updater));
     	
 	    
     	myNet.train(nEpochs);

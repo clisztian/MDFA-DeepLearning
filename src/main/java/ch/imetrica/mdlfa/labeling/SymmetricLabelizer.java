@@ -136,6 +136,37 @@ public class SymmetricLabelizer implements Labelizer {
 		return label;
 	}
 
+    public TimeSeries<Double> getSymmetricSignal(TargetSeries series) {
+		
+		int N = series.size();
+		double sum = 0;
+		
+		TimeSeries<Double> label = new TimeSeries<Double>();
+
+		for(int i = 0; i < L-1; i++) {
+			label.add(new TimeSeriesEntry<Double>(series.getTargetDate(i), null));
+		}
+		
+		for(int i = L-1; i < N - L; i++) {
+			
+			sum = 0.0;
+			for(int l=0;l < L; l++) {
+		    	sum = sum + symmetricaCoeffs[l]*series.getTargetValue(i+l);
+		    } 
+			
+		    for(int l=1; l < L; l++) {
+		    	sum = sum + symmetricaCoeffs[l]*series.getTargetValue(i-l);
+		    }
+		    		    
+		    label.add(new TimeSeriesEntry<Double>(series.getTargetDate(i), sum));
+		}
+		
+		for(int i = N - L; i < N; i++) {
+			label.add(new TimeSeriesEntry<Double>(series.getTargetDate(i), null));
+		}
+		return label;
+	}
+    
 	
 	
 	@Override
