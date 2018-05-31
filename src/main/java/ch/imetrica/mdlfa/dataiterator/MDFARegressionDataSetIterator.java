@@ -55,7 +55,17 @@ public class MDFARegressionDataSetIterator implements DataSetIterator {
 
 	private String[][] nextDates;
 	
-	
+	/**
+	 * Instantiates an MDFA DataSet Iterator for regression applications. 
+	 * 
+	 * @param dataInputPaths A collection of csv files
+	 * @param fileInfo Metadata info for the files
+	 * @param anyMDFAs A collection of feature extractors
+	 * @param miniBatchSize MiniBatchSize
+	 * @param totalExamples 
+	 * @param timeStepLength Length of the time series
+	 * @throws Exception
+	 */
 	public MDFARegressionDataSetIterator(String[] dataInputPaths,
             TimeSeriesFile fileInfo,
             MDFABase[] anyMDFAs,
