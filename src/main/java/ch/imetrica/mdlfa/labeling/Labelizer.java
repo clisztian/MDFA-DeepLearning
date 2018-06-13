@@ -18,7 +18,6 @@ import ch.imetrica.mdfa.series.TimeSeries;
  * 2) Fixed Period labeling: every period (day, week, etc) is labeled
  * 3) Regime labeling: every regime change is labeled
  * 
- * Additionally, there are two types of labels that can be c
  * 
  * 
  * 
