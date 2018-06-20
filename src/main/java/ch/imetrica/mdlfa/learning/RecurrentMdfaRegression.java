@@ -60,7 +60,7 @@ import ch.imetrica.mdlfa.util.TimeSeriesFile;
  * while the recurrent neural network learns to approximate
  * a signal produced by a symmetric filter. The quality
  * of the learning procedure depends on multiple factors, with 
- * the most influencial factor being the definition of
+ * the most influential factor being the definition of
  * the feature extractors. 
  * 
  * 
@@ -80,7 +80,10 @@ public class RecurrentMdfaRegression {
 	
 	private static final Logger log = LoggerFactory.getLogger(RecurrentMdfa.class);
 
-	
+	public RecurrentMdfaRegression(MDFAFeatureExtraction featureExtractor) {
+		
+		this.featureExtractor = featureExtractor;
+	}
 	
 	public RecurrentMdfaRegression() {
 		
@@ -302,46 +305,7 @@ public class RecurrentMdfaRegression {
 	}
 
 
-    public static void main(String[] args) throws Exception {
-	    	
-	    
-    	String[] dataFiles = new String[1];
-		dataFiles[0] = "src/main/resources/stockDailyData/AAPL.daily.csv";
-		TimeSeriesFile fileInfo = new TimeSeriesFile("yyyy-MM-dd", "Index", "Open");
-    	
-    	int miniBatchSize = 100;
-    	int totalTrainExamples = 1500;
-    	int totalTestExamples = 300;
-		int timeStepLength = 60;
-		
-		int nHiddenLayers = 1;
-		int nHidden = 300;
-		
-		int nEpochs = 400;
-		int seed = 123;
-		int iterations = 40;
-		double learningRate = .001;
-		double gradientNormThreshold = 10.0;
-		
-		IUpdater updater = new Nesterovs(learningRate, .4);
-		
-		
-		RecurrentMdfaRegression myNet = new RecurrentMdfaRegression();
-    	myNet.setTrainingTestData(dataFiles, fileInfo, 
-    			                  miniBatchSize, totalTrainExamples, 
-    			                  totalTestExamples, timeStepLength);
-    	
-    	//myNet.normalizeData();
-    	
-		myNet.buildNetworkLayers(nHiddenLayers, nHidden, 
-    			setNeuralNetConfiguration(seed, iterations, learningRate, gradientNormThreshold, 0, updater));
-
-		//myNet.setupUserInterface();
-    	myNet.train(nEpochs);
     
-    	myNet.printPredicitions();
-    	myNet.plotBatches(10);
-    }
     
     public void printPredicitions() {
     	
@@ -378,8 +342,15 @@ public class RecurrentMdfaRegression {
         seriesCollection.addSeries(series);
     }
     
-    
-	
+    /*
+     * Sets the MDFAFeatureExtraction for the underlying (multivariate) time series
+     * 
+     * @param featureExtractor A set (one or more) of feature extractor in the form of MDFABase objects
+     */
+	public RecurrentMdfaRegression setFeatureExtractor(MDFAFeatureExtraction featureExtractor) {
+		this.featureExtractor = featureExtractor;
+		return this;
+	}
 	    
 	    
 }
