@@ -24,10 +24,33 @@ import ch.imetrica.mdlfa.util.TimeSeriesFile;
  * transformed appropriately, and constructs the target signal for a given frequency using
  * the symmetric filter of a fixed length which we'll call LN = 2*L-1 for some L. 
  * Since the symmetric filter uses information L-1 steps into the future and L steps in 
- * the present past, all values except the first L-1 and final L-1 the target time series can be used.   
+ * the present past, all values except the first L-1 and final L-1 the target time series can be used. 
+ * These values will be set as null in the TimeSeriesEntry objects. 
  * 
+ * The frequency used in extracting the target signal will be taken as the frequency corresponding
+ * to the first MDFABase object in the MDFA feature extraction set. The target signal will be computed 
+ * over the entire target time series in the initiation using the SymmetricLabelizer, and then the 
+ * train and test collections will be extraction from this target series and signal pairing in the 
+ * DataSetIterator, where the features will be the K number of MDFA features plus time series data, 
+ * and the label will be the output of the target signal, for each observation. 
+ * 
+ * In this example, the network is built as a multilayered LSTM with 212 hidden nodes on each 
+ * of the 2 hidden layers. The input at each time step will be K+1 feature extracted values plus 
+ * target series, and the output of the network in this case will be simply be an
+ * approximation to the target signal, and thus in the form of a recurrent regression formulation. 
+ * The basic RNN settings in this case require tanh activation functions and an output loss function 
+ * given by the MSE, with an output activation in the form of an identity function. 
+ * Other parameters into the LSTM include a Nesterov updating rule which assigns a learning rate 
+ * parameter and a momentum for an updating rule during the optimizing. These values are left to 
+ * default values. Depending on the normalization of the data, the amount of data, and quality of
+ * the feature extractors, these LSTM hyperparamter values could require adjustment. Finally, we 
+ * include an L2 regularization rule on the weights and a gradientNormalizer/clipping rule 
+ * in the case of growing gradients in the backpropagation in time algorithm included in dl4j. 
+ * These are typically standard practices in dealing with LSTMs. Other options including dropout
+ * and mean-variance weight normalization have been left out of this experiment.  
  *  
- *  
+ * Along with the output, we will also be outputing the original DateTime stamp in String format
+ * for  
  *  
  */
 
@@ -48,7 +71,7 @@ public class MDFARegressionExample {
 		int timeStepLength = 60;
 		
 		int nHiddenLayers = 1;
-		int nHidden = 300;
+		int nHidden = 212;
 		
 		int nEpochs = 400;
 		int seed = 123;
