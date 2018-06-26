@@ -6,8 +6,7 @@ aid of both the multivariate direct filter approach (MDFA) and deep recurrent ne
 In this package, we focus on two network structures, namely a recurrent weighted average network
 and a standard long-short term memory network. 
 
-
-
+![alt text](imgs/Selection_070.png)
 
 One might want to develop predictive models in multivariate time series data 
 using MDFA-DeepLearning if the time series exhibit any of the following properties:
