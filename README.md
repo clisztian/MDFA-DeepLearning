@@ -4,7 +4,10 @@ The goal of MDFA-DeepLearning is to learn underlying patterns, signals, and regi
 multivariate time series and to detect and predict or forecast them in real-time with the
 aid of both the multivariate direct filter approach (MDFA) and deep recurrent neural networks. 
 In this package, we focus on two network structures, namely a recurrent weighted average network
-and a standard long-short term memory network.  
+and a standard long-short term memory network. 
+
+
+
 
 One might want to develop predictive models in multivariate time series data 
 using MDFA-DeepLearning if the time series exhibit any of the following properties:
@@ -18,30 +21,6 @@ The MDFA-DeepLearning approach differs from most machine learning methods in tim
 
 Furthermore, simply applying standard recurrent neural networks for step-ahead forecasting or 
 signal extraction directly on the noisy data is a useless exercise - the recurrent networks will only learn noise, producing signals and forecasts of little to no value. 
-
-The back-end used for the novel feature extraction is the multivariate direct filter approach (MDFA), and is used to extract both local (higher-frequency) and global (low-frequency) 
-features in real-time, out-of-sample, and output these features in a multivariate time series as inputs into a recurrent weighted average (RWA) or Long-short term memory recurrent neural network. 
-The package is divided into essentially three different components which all need to be defined properly in order to produce predictive models for your time series data:
-1) Labeling interface
-2) Feature extractors
-3) DataIterator interface
-4) Learning interface
-
-Labeling interface
-The package includes an interface for labeling time series. The labeling process takes lots of historical data, and labels each time series observation 
-in some manner. There are three types of labels that can be used:
- * There are three categories of labeling strategies that this interface
- * will offer:
- * 
- * 1) Observational labeling: every time series observation is labeled by a signal value (for example a target value computed by a symmetric target filter). 
-      This is sequence-to-sequence labeling for time series regression. 
- * 2) Fixed Period labeling: every period (day, week, etc) is labeled, typically by a one-hot vector. This is sequence-to-value labeling. The end of the period 
-      is labeled and the rest of the values are not (masked by nonvalues in the code).  
- * 3) Regime labeling: every value in a specific regime is labeled, either by a one-hot vector (for example, long (1,0) short (0,1) neutral (0,0), or trend (1,0) and mean-reverting (0,1)).
-      THis is another example of sequence-to-sequence, but using one-hot vectors and now in the form of sequence classification.  
-
-  Other labeling strategies can certainly be used, but these are the three most common.
-
 
 ## Requirements
 
