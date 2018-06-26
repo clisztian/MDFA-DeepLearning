@@ -8,6 +8,7 @@ and a standard long-short term memory network.
 
 ![alt text](imgs/Selection_070.png)
 
+## Why Use MDFA-DeepLearning
 One might want to develop predictive models in multivariate time series data 
 using MDFA-DeepLearning if the time series exhibit any of the following properties:
 1) High-Dimensionality (many (un)correlated nonstationary time series)
@@ -23,7 +24,7 @@ signal extraction directly on the noisy data is a useless exercise - the recurre
 
 ## Requirements
 
-MDFA-DeepLearning requires both the MDFA-Toolkit package for constructing the time series feature extractors and the Eclipse Deeplearning4j (dl4j) library for the deep recurrent neural network constructors. The dl4j library is freely available at github.com/deeplearning4j, but is included in the build of this package using Gradle as the dependency management tool. 
+MDFA-DeepLearning requires both the MDFA-Toolkit package for constructing the time series feature extractors and the Deeplearning4j (dl4j) library for the deep recurrent neural network constructors. The dl4j library is freely available at github.com/deeplearning4j, but is included in the build of this package using Gradle as the dependency management tool. 
 
 The back-end for the dl4j package will depend on your computational infrastructure, but is available 
 on a local basis using CPUs, or can take advantage of GPUs using CUDA libraries. In this package I have included a reference to both (assuming a standard linux64 architecture. 
@@ -33,9 +34,7 @@ available on the github, which will run on the ND4J package.
 
 ## Installation
 
-For the build and package management, we use a Gradle wrapper, and either Eclipse, IntelliJ, or NetBeans are recommended for the IDEs. Once the package has been cloned, the easiest way to get
-the package installed and running is by using an Import -> Gradle -> Gradle Project in your
-IDE. Once successfully loaded, Gradle will automatically fetch all the dependencies including 
+For the build and package management, we use a Gradle wrapper, and either Eclipse, IntelliJ, or NetBeans are recommended for the IDEs. Once the package has been cloned, the easiest way to get the package installed and running is by using an Import -> Gradle -> Gradle Project in your IDE. Once successfully loaded, Gradle will automatically fetch all the dependencies including 
 the dl4j src libraries. By default, I have set the backend ND4J package to `nd4j-native-platform`, but if 
 GPU computation is desired, this can be set to `nd4j-cuda-x-platform` where `x` is your CUDA library version
 installation. 
