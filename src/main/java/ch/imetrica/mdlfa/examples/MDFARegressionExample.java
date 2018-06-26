@@ -50,7 +50,7 @@ import ch.imetrica.mdlfa.util.TimeSeriesFile;
  * and mean-variance weight normalization have been left out of this experiment.  
  *  
  * Along with the output, we will also be outputing the original DateTime stamp in String format
- * for  
+ * for comparison with the original target signal. 
  *  
  */
 
@@ -87,12 +87,11 @@ public class MDFARegressionExample {
     			                  miniBatchSize, totalTrainExamples, 
     			                  totalTestExamples, timeStepLength);
     	
-    	//myNet.normalizeData();
     	
 		myNet.buildNetworkLayers(nHiddenLayers, nHidden, 
 				RecurrentMdfaRegression.setNeuralNetConfiguration(seed, iterations, learningRate, gradientNormThreshold, 0, updater));
 
-		//myNet.setupUserInterface();
+		myNet.setupUserInterface();
     	myNet.train(nEpochs);
     
     	myNet.printPredicitions();

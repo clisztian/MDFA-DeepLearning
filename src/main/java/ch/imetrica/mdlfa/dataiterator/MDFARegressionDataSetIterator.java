@@ -131,9 +131,6 @@ public class MDFARegressionDataSetIterator implements DataSetIterator {
 	@Override
 	public boolean hasNext() {
 				
-//		System.out.println(currentFileListIndex + " " + miniBatchSize + " " + timeStepLength + " " + 
-//				fxSeries.size() + " " + fxSeries.getSeries(0).getCoefficientSet(0).length);
-		
 		return currentFileListIndex + miniBatchSize + timeStepLength < 
 				 (fxSeries.size() - fxSeries.getSeries(0).getCoefficientSet(0).length) ;
 	}
